@@ -40,6 +40,6 @@ $ php artisan vendor:publish --provider="Tlwl\HttpClient\HttpClientServiceProvid
 
 随后，请在 `config` 文件夹中完善配置信息。
 
-具体使用说明请传送至 [https://github.com/tian-wolf/http-client](https://github.com/tian-wolf/http-client)
+具体使用说明请传送至 [https://github.com/tian-wolf/laravel-http-client](https://github.com/tian-wolf/laravel-http-client)
 
-## LICENSE [MIT](https://github.com/tian-wolf/http-client/blob/master/LICENSE)
+## LICENSE [MIT](https://github.com/tian-wolf/laravel-http-client/blob/master/LICENSE)
