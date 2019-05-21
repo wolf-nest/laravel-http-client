@@ -9,7 +9,6 @@
  * with this source code in the file LICENSE.
  */
 
-namespace Tlwl\HttpClient;
 
 /**
  * 生成签名串.
