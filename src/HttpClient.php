@@ -12,31 +12,56 @@
 namespace Tlwl\HttpClient;
 
 use GuzzleHttp\Client;
-use Tlwl\HttpClient\Response;
-use Tlwl\HttpClient\Support\Config;
+use Tlwl\HttpClient\Support\Logger;
 use Tlwl\HttpClient\Exceptions\Exception;
 use Tlwl\HttpClient\Traits\ResponseCastable;
 use Tlwl\HttpClient\Exceptions\HttpException;
 use Tlwl\HttpClient\Exceptions\InvalidArgumentException;
-use Tlwl\HttpClient\Support\Logger;
+use Tlwl\HttpClient\Support\TArray;
 
 /**
  * 内部发起HTTP请求去请求服务端并获得响应数据
  * @author 悟玄 <roc9574@sina.com>
- * @method mixed get()
- * @method mixed put()
- * @method mixed post()
- * @method mixed path()
- * @method mixed delete()
- * @method mixed methodName()
+ * @method \Tlwl\HttpClient\Traits\ResponseCastable get(string $uri,string $format='json',array $data=[])
+ * @method \Tlwl\HttpClient\Traits\ResponseCastable put(string $uri,array $data,string $format)
+ * @method \Tlwl\HttpClient\Traits\ResponseCastable post(string $uri,array $data,string $format)
+ * @method \Tlwl\HttpClient\Traits\ResponseCastable path(string $uri,array $data,string $format)
+ * @method \Tlwl\HttpClient\Traits\ResponseCastable delete(string $uri,array $data,string $format)
  * 
+ * @see \GuzzleHttp\Client
+ * @see \Tlwl\HttpClient\Support\Logger
+ * @see \Tlwl\HttpClient\Traits\ResponseCastable
  */
 class HttpClient{
 
     use ResponseCastable;
 
+    /**
+     * 签名私钥配置
+     * @author 杨鹏 <yangpeng1@dgg.net>
+     * @var string
+     */
+    private static $signKey = "";
+
+    /**
+     * 请求客户端实例化
+     * @author 杨鹏 <yangpeng1@dgg.net>
+     * @var \GuzzleHttp\Client
+     */
     protected static $client;
+
+    /**
+     * 数据返回格式
+     * @author 杨鹏 <yangpeng1@dgg.net>
+     * @var \Tlwl\HttpClient\Traits\ResponseCastable array|object|collection|json
+     */
     protected static $format;
+
+    /**
+     * 实例化参数配置
+     * @author 杨鹏 <yangpeng1@dgg.net>
+     * @var array
+     */
     protected static $guzzle=[
         'base_uri'=>'',
     ];
@@ -49,6 +74,7 @@ class HttpClient{
         static::registerLoggerService();
         static::registerClientService($guzzle);
         static::$format = empty($format)?config('http-client.format'):$format;
+        static::$signKey = config('http-client.sign_key');
     }
 
     /**
@@ -80,11 +106,13 @@ class HttpClient{
         }
 
         try {
+            $data['sign'] = generate_sign($data,static::$signKey);
             Logger::debug("http client request method:GET uri:{$uri} data:",$data);
             $response=self::$client->get($uri,['query'=>$data]);
-            
+
             return self::castResponseToType($response,$format);
         }catch (Exception $e) {
+            Logger::error("http client request code:{$e->getCode()}",[$e->getMessage()]);
             throw new HttpException($e->getMessage(), $e->getCode(), $e);
         }
     }
@@ -117,7 +145,9 @@ class HttpClient{
             throw new InvalidArgumentException('Invalid response format: '.$format);
         }
 
-        $body['body'] = http_build_query($data);
+        $data['sign'] = generate_sign($data,static::$signKey);
+
+        $body['body'] = urldecode(http_build_query($data));
 
         try {
             Logger::debug("http client request method:PUT uri:{$uri} data:",$data);
@@ -159,6 +189,8 @@ class HttpClient{
 
 
         try {
+            $data = TArray::depthFormat($data);
+            $data['sign'] = generate_sign($data,static::$signKey);
             Logger::debug("http client request method:POST uri:{$uri} data:",$data);
             $response = self::$client->post($uri,['form_params'=>$data]);
             return self::castResponseToType($response,$format);
@@ -198,6 +230,7 @@ class HttpClient{
 
         $query=['body'=>http_build_query($data)];
         try {
+            $data['sign'] = generate_sign($data,static::$signKey);
             Logger::debug("http client request method:PATCH uri:{$uri} data:",$query);
             $response = self::$client->patch($uri,$query);
             return self::castResponseToType($response,$format);
@@ -238,6 +271,7 @@ class HttpClient{
         }
 
         try {
+            $data['sign'] = generate_sign($data,static::$signKey);
             Logger::debug("http client request method:PATCH uri:{$uri} data:",$data);
             $response =  self::$client->delete($uri,['form_params'=>$data]);
             return self::castResponseToType($response,$format);

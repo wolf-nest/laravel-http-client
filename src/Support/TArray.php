@@ -463,4 +463,21 @@ class TArray
     {
         return !is_array($value) ? [$value] : $value;
     }
+
+    /**
+     * Deep formatted arrays.
+     * 
+     * @param array $array
+     * @return array
+     */
+    public static function depthFormat(array $array)
+    {
+        return array_reduce(array_keys($array), function ($result, $item) use ($array) {
+            if(is_array($array[$item])){
+                return array_merge($result, [$item=>json_encode($array[$item])]);
+            }else{
+                return array_merge($result, [$item=>$array[$item]]);
+            }
+        },[]);
+    }
 }
