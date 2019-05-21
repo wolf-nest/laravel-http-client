@@ -12,6 +12,11 @@
 return [
 
     /**
+     * sign key.
+     */
+   'sign_key'=>'CD77ECDD9C9E4C67B41222E1269787D4',
+
+    /**
      * response format.
      */
     'format'=>'json',
