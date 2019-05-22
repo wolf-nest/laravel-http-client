@@ -189,7 +189,6 @@ class HttpClient{
 
 
         try {
-            $data = TArray::depthFormat($data);
             $data['sign'] = generate_sign($data,static::$signKey);
             Logger::debug("http client request method:POST uri:{$uri} data:",$data);
             $response = self::$client->post($uri,['form_params'=>$data]);
