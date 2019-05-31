@@ -18,6 +18,10 @@ use Tlwl\HttpClient\Traits\ResponseCastable;
 use Tlwl\HttpClient\Exceptions\HttpException;
 use Tlwl\HttpClient\Exceptions\InvalidArgumentException;
 use Tlwl\HttpClient\Support\TArray;
+use Illuminate\Support\Facades\Auth;
+
+
+
 
 /**
  * 内部发起HTTP请求去请求服务端并获得响应数据
