@@ -41,29 +41,30 @@ class HttpClient{
      * @author 杨鹏 <yangpeng1@dgg.net>
      * @var string
      */
-    private static $signKey = "";
+    private $signKey = "";
 
     /**
      * 请求客户端实例化
      * @author 杨鹏 <yangpeng1@dgg.net>
      * @var \GuzzleHttp\Client
      */
-    protected static $client;
+    private $client;
 
     /**
      * 数据返回格式
      * @author 杨鹏 <yangpeng1@dgg.net>
      * @var \Tlwl\HttpClient\Traits\ResponseCastable array|object|collection|json
      */
-    protected static $format;
+    private $format;
 
     /**
      * 实例化参数配置
      * @author 杨鹏 <yangpeng1@dgg.net>
      * @var array
      */
-    protected static $guzzle=[
+    private $guzzle=[
         'base_uri'=>'',
+        'headers'=>['auth-token'=>''],
     ];
 
     /**
@@ -71,10 +72,16 @@ class HttpClient{
      */
     public function __construct(array $guzzle=[],string $format= '')
     {
-        static::registerLoggerService();
-        static::registerClientService($guzzle);
-        static::$format = empty($format)?config('http-client.format'):$format;
-        static::$signKey = config('http-client.sign_key');
+        if(Auth::guard('redis')->check()){
+            $this->guzzle['headers']['auth-token'] = auth()->member()->auth_key;
+        }else{
+            $this->guzzle['headers']['auth-token'] = '';
+        }
+        
+        $this->registerLoggerService();
+        $this->registerClientService($guzzle);
+        $this->format = empty($format)?config('http-client.format'):$format;
+        $this->signKey = config('http-client.sign_key');
     }
 
     /**
@@ -85,7 +92,7 @@ class HttpClient{
      * @param string $mode  请求方式 同步 || 异步 默认 同步 ['sync','async']
      * @return void
      */
-    public static function get(string $uri,string $format='json',array $data=[],string $mode='sync')
+    public function get(string $uri,string $format='json',array $data=[],string $mode='sync')
     {
 
         if (!\in_array(\strtolower($mode),['sync','async']))
@@ -106,9 +113,9 @@ class HttpClient{
         }
 
         try {
-            $data['sign'] = generate_sign($data,static::$signKey);
+            $data['sign'] = generate_sign($data,$this->signKey);
             Logger::debug("http client request method:GET uri:{$uri} data:",$data);
-            $response=self::$client->get($uri,['query'=>$data]);
+            $response=$this->client->get($uri,['query'=>$data]);
 
             return self::castResponseToType($response,$format);
         }catch (Exception $e) {
@@ -125,7 +132,7 @@ class HttpClient{
      * @param string $mode  请求方式 同步 || 异步 默认 同步 ['sync','async']
      * @return void
      */
-    public static function put(string $uri,array $data,string $format = 'json',string $mode = "sync")
+    public function put(string $uri,array $data,string $format = 'json',string $mode = "sync")
     {
 
         if (!\in_array(\strtolower($mode),['sync','async']))
@@ -145,13 +152,13 @@ class HttpClient{
             throw new InvalidArgumentException('Invalid response format: '.$format);
         }
 
-        $data['sign'] = generate_sign($data,static::$signKey);
+        $data['sign'] = generate_sign($data,$this->signKey);
 
         $body['body'] = urldecode(http_build_query($data));
 
         try {
             Logger::debug("http client request method:PUT uri:{$uri} data:",$data);
-            $response = self::$client->put($uri,$body);
+            $response = $this->client->put($uri,$body);
             return self::castResponseToType($response,$format);
         }catch (Exception $e) {
             Logger::error("http client request code:{$e->getCode()}",[$e->getMessage()]);
@@ -168,7 +175,7 @@ class HttpClient{
      * @param string $mode      请求方式 同步 || 异步 默认 同步 ['sync','async']
      * @return void
      */
-    public static function post(string $uri,array $data,string $format='json',string $mode = "sync")
+    public function post(string $uri,array $data,string $format='json',string $mode = "sync")
     {
         if (!\in_array(\strtolower($mode),['sync','async']))
         {
@@ -189,9 +196,9 @@ class HttpClient{
 
 
         try {
-            $data['sign'] = generate_sign($data,static::$signKey);
+            $data['sign'] = generate_sign($data,$this->signKey);
             Logger::debug("http client request method:POST uri:{$uri} data:",$data);
-            $response = self::$client->post($uri,['form_params'=>$data]);
+            $response = $this->client->post($uri,['form_params'=>$data]);
             return self::castResponseToType($response,$format);
         }catch (Exception $e) {
             Logger::error("http client request code:{$e->getCode()}",[$e->getMessage()]);
@@ -208,7 +215,7 @@ class HttpClient{
      * @param string $mode      请求方式 同步 || 异步 默认 同步 ['sync','async']
      * @return void
      */
-    public static function patch(string $uri,array $data,string $format = 'json',string $mode = "sync")
+    public function patch(string $uri,array $data,string $format = 'json',string $mode = "sync")
     {
         if (!\in_array(\strtolower($mode),['sync','async']))
         {
@@ -229,9 +236,9 @@ class HttpClient{
 
         $query=['body'=>http_build_query($data)];
         try {
-            $data['sign'] = generate_sign($data,static::$signKey);
+            $data['sign'] = generate_sign($data,$this->signKey);
             Logger::debug("http client request method:PATCH uri:{$uri} data:",$query);
-            $response = self::$client->patch($uri,$query);
+            $response = $this->client->patch($uri,$query);
             return self::castResponseToType($response,$format);
         }catch (Exception $e) {
             Logger::error("http client request code:{$e->getCode()}",[$e->getMessage()]);
@@ -249,7 +256,7 @@ class HttpClient{
      * @param string $mode      请求方式 同步 || 异步 默认 同步 ['sync','async']
      * @return void
      */
-    public static function delete(string $uri,array $data,string $format='json',string $mode = "sync")
+    public function delete(string $uri,array $data,string $format='json',string $mode = "sync")
     {
 
         if (!\in_array(\strtolower($mode),['sync','async']))
@@ -270,9 +277,9 @@ class HttpClient{
         }
 
         try {
-            $data['sign'] = generate_sign($data,static::$signKey);
+            $data['sign'] = generate_sign($data,$this->signKey);
             Logger::debug("http client request method:PATCH uri:{$uri} data:",$data);
-            $response =  self::$client->delete($uri,['form_params'=>$data]);
+            $response =  $this->client->delete($uri,['form_params'=>$data]);
             return self::castResponseToType($response,$format);
         }catch (Exception $e) {
             Logger::error("http client request code:{$e->getCode()}",[$e->getMessage()]);
@@ -304,7 +311,7 @@ class HttpClient{
      * @author 杨鹏 <yangpeng1@dgg.net>
      * @return \GuzzleHttp\Client;
      */
-    private static function registerClientService(array $guzzle){
+    private function registerClientService(array $guzzle){
         $config_guzzle = [
             'cert'=>config('http-client.cert'),
             'auth'=>config('http-client.auth'),
@@ -315,6 +322,6 @@ class HttpClient{
             'connect_timeout'=>config('http-client.connect_timeout'),
             'allow_redirects'=>config('http-client.allow_redirects')
         ];
-        self::$client = new Client(array_replace_recursive(self::$guzzle,$config_guzzle,$guzzle));
+        $this->client = new Client(array_replace_recursive($this->guzzle,$config_guzzle,$guzzle));
     }
 }
