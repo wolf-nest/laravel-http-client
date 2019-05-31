@@ -77,9 +77,9 @@ class HttpClient{
     public function __construct(array $guzzle=[],string $format= '')
     {
         if(Auth::guard('redis')->check()){
-            $this->guzzle['headers']['auth-token'] = auth()->member()->auth_key;
+            $guzzle['headers']['auth-token'] = auth()->member()->auth_key;
         }else{
-            $this->guzzle['headers']['auth-token'] = '';
+            $guzzle['headers']['auth-token'] = '';
         }
         
         $this->registerLoggerService();
