@@ -76,16 +76,19 @@ class HttpClient{
      */
     public function __construct(array $guzzle=[],string $format= '')
     {
-        if(Auth::guard('redis')->check()){
-            $guzzle['headers']['auth-token'] = auth()->member()->auth_key;
-        }else{
-            $guzzle['headers']['auth-token'] = '';
-        }
-        
-        $this->registerLoggerService();
-        $this->registerClientService($guzzle);
-        $this->format = empty($format)?config('http-client.format'):$format;
-        $this->signKey = config('http-client.sign_key');
+        $this->middleware(function ($request, $next) use($guzzle,$format) {
+            if (Auth::guard('redis')->check()) {
+                $guzzle['headers']['auth-token'] = auth()->member()->auth_key;
+            } else {
+                $guzzle['headers']['auth-token'] = '';
+            }
+
+            $this->registerLoggerService();
+            $this->registerClientService($guzzle);
+            $this->format = empty($format) ? config('http-client.format') : $format;
+            $this->signKey = config('http-client.sign_key');
+            return $next($request);
+        });
     }
 
     /**
